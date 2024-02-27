@@ -16,7 +16,6 @@ contract TokenStaking is ReentrancyGuard {
         uint256 lastRewardCalculationBlock;
 
         uint256 rewardsClaimedSoFar;
-        uint256 lastRewardClaimBlock;
 
     }
 
@@ -37,10 +36,8 @@ contract TokenStaking is ReentrancyGuard {
     uint256 public totalStakedTokens;
     uint256 public apy; // reward rate
     uint256 public daysOfStaking;
-    uint256 public earlyUnstakeFeePercentage;
 
     uint256 constant PERCENTAGE_DENOMINATOR = 1000;
-    uint256 constant REWARD_PERCENTAGE_THRESHOLD = 10;
 
     bool public isStakingPaused;
 
@@ -57,8 +54,7 @@ contract TokenStaking is ReentrancyGuard {
         uint256 _apy,
         uint256 _daysOfStaking,
         uint256 _minStakingAmount,
-        uint256 _maxStakingAmount,
-        uint256 _earlyUnstakeFeePercentage
+        uint256 _maxStakingAmount
     ) {
         owner = msg.sender;
         stakeToken = IERC20(_stakeToken);
@@ -67,7 +63,6 @@ contract TokenStaking is ReentrancyGuard {
         stakingStartDate = _stakingStartDate;
         minStakingAmount = _minStakingAmount;
         maxStakingAmount = _maxStakingAmount;
-        earlyUnstakeFeePercentage = _earlyUnstakeFeePercentage;
         apy = _apy;
         daysOfStaking = _daysOfStaking;
     }
@@ -105,10 +100,6 @@ contract TokenStaking is ReentrancyGuard {
 
     function getRewardRate() external view returns (uint256) {
         return apy;
-    }
-
-    function getEarlyUnstakeFeePercentage() external view returns (uint256) {
-        return earlyUnstakeFeePercentage;
     }
 
     function getDaysOfStaking() external view returns (uint256) {
@@ -175,10 +166,6 @@ contract TokenStaking is ReentrancyGuard {
         stakingEndDate = _updatedDate;
     }
 
-    function updateEarlyUnstakeFee(uint256 _updatedFee) external onlyOwner {
-        require(_updatedFee > 0, "Updated fee cannot be 0");
-        earlyUnstakeFeePercentage = _updatedFee;
-    }
 
     function stakeTokenForUser(address _userAddress, uint256 _amount)
         external
@@ -232,14 +219,13 @@ contract TokenStaking is ReentrancyGuard {
 
         uint256 currentBlock = getCurrentBlock();
 
-        uint256 currentTime = getCurrentTime();
 
         require(
-            currentTime > stakingStartDate,
+            block.timestamp > stakingStartDate,
             "Staking has not started yet"
         );
         require(
-            stakingEndDate > currentTime,
+            stakingEndDate > block.timestamp,
             "Staking has already ended"
         );
 
@@ -287,19 +273,10 @@ contract TokenStaking is ReentrancyGuard {
             "You haven't staked this much amount of stakeTokens"
         );
 
-        uint256 currentBlock = block.number;
+        // uint256 currentBlock = getCurrentBlock();
+
         _calculateRewards(user);
 
-        uint256 earlyUnstakeFee;
-        if (
-            userDetails[user].lastStakeBlock + daysOfStaking >= currentBlock
-        ) {
-            earlyUnstakeFee = ((_amount * earlyUnstakeFeePercentage) /
-                PERCENTAGE_DENOMINATOR);
-            emit EarlyUnstake(user, earlyUnstakeFee);
-        }
-
-        uint256 amountToTransfer = _amount - earlyUnstakeFee;
 
         userDetails[user].tokensStaked -= _amount;
         totalStakedTokens -= _amount;
@@ -310,7 +287,7 @@ contract TokenStaking is ReentrancyGuard {
         }
 
         require(
-            stakeToken.transfer(user, amountToTransfer),
+            stakeToken.transfer(user, _amount),
             "stakeToken Unstaking Failed"
         );
 
@@ -364,11 +341,6 @@ contract TokenStaking is ReentrancyGuard {
       return (userReward, currentBlock);
  }
 
- function getCurrentTime() view internal returns(uint256){
-
-    return block.timestamp;
-
- }
 
  function getCurrentBlock() view internal returns(uint256){
 
