@@ -44,7 +44,6 @@ contract TokenStaking is ReentrancyGuard {
     event Staked(address indexed user, uint256 indexed amount);
     event Unstaked(address indexed user, uint256 indexed amount);
     event RewardsClaimed(address indexed user, uint256 indexed amount);
-    event EarlyUnstake(address indexed user, uint256 indexed amount);
 
     constructor(
         address _stakeToken,
@@ -273,7 +272,6 @@ contract TokenStaking is ReentrancyGuard {
             "You haven't staked this much amount of stakeTokens"
         );
 
-        // uint256 currentBlock = getCurrentBlock();
 
         _calculateRewards(user);
 
@@ -295,7 +293,7 @@ contract TokenStaking is ReentrancyGuard {
     }
 
     function claimRewards() external nonReentrant whenContractHasBalance(userDetails[msg.sender].totalRewards) {
-        // uint256 currentBlock = block.number;
+
         _calculateRewards(msg.sender);
 
         uint256 rewardAmount = userDetails[msg.sender].totalRewards;
@@ -334,9 +332,13 @@ contract TokenStaking is ReentrancyGuard {
 
      if (currentBlock > userDetails[_user].lastStakeBlock) {
         
-        userReward = ((currentBlock - userBlock) * userDetails[_user].tokensStaked * apy) / PERCENTAGE_DENOMINATOR;
+        currentBlock = userDetails[_user].lastStakeBlock;
         
      }
+
+        uint256 totalBlocks = currentBlock - userBlock;
+        
+        userReward += (totalBlocks * userDetails[_user].tokensStaked * apy) / PERCENTAGE_DENOMINATOR;
 
       return (userReward, currentBlock);
  }
@@ -347,4 +349,5 @@ contract TokenStaking is ReentrancyGuard {
     return block.number;
 
  }
+
 }
