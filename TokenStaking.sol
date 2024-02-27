@@ -249,7 +249,7 @@ contract TokenStaking is ReentrancyGuard {
         userDetails[_userAddress].tokensStaked += _amount;
         totalStakedTokens += _amount;
 
-        nextAccessTime[msg.sender] = block.timestamp + daysOfStaking;
+        nextAccessTime[msg.sender] = daysOfStaking;
 
         require(
             stakeToken.transferFrom(msg.sender, address(this), _amount),
