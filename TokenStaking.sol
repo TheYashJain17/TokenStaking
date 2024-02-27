@@ -21,6 +21,8 @@ contract TokenStaking is ReentrancyGuard {
 
     mapping(address => User) private userDetails;
 
+    mapping(address => uint256) private nextAccessTime;
+
     address public owner;
 
     IERC20 public stakeToken;
@@ -247,6 +249,8 @@ contract TokenStaking is ReentrancyGuard {
         userDetails[_userAddress].tokensStaked += _amount;
         totalStakedTokens += _amount;
 
+        nextAccessTime[msg.sender] = block.timestamp + daysOfStaking;
+
         require(
             stakeToken.transferFrom(msg.sender, address(this), _amount),
             "stakeToken Staking Failed"
@@ -271,6 +275,8 @@ contract TokenStaking is ReentrancyGuard {
             userDetails[user].tokensStaked >= _amount,
             "You haven't staked this much amount of stakeTokens"
         );
+
+        require(block.timestamp >= nextAccessTime[msg.sender] , "Staking Period has not ended yet");
 
 
         _calculateRewards(user);
