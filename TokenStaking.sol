@@ -25,19 +25,19 @@ contract TokenStaking is ReentrancyGuard {
 
     address public owner;
 
-    IERC20 public stakeToken;
-    IERC20 public rewardToken;
+    IERC20 private stakeToken;
+    IERC20 private rewardToken;
 
-    uint256 public stakingStartDate;
-    uint256 public stakingEndDate;
+    uint256 stakingStartDate;
+    uint256 stakingEndDate;
 
-    uint256 public minStakingAmount;
-    uint256 public maxStakingAmount;
+    uint256 minStakingAmount;
+    uint256  maxStakingAmount;
 
-    uint256 public totalUsers;
-    uint256 public totalStakedTokens;
-    uint256 public apy; // reward rate
-    uint256 public daysOfStaking;
+    uint256 totalUsers;
+    uint256 totalStakedTokens;
+    uint256 apy; // reward rate
+    uint256 daysOfStaking;
 
     uint256 constant PERCENTAGE_DENOMINATOR = 1000;
 
@@ -65,7 +65,7 @@ contract TokenStaking is ReentrancyGuard {
         minStakingAmount = _minStakingAmount;
         maxStakingAmount = _maxStakingAmount;
         apy = _apy;
-        daysOfStaking = _daysOfStaking;
+        daysOfStaking = (_daysOfStaking * 60 * 60 * 24);
     }
 
     modifier onlyOwner() {
@@ -75,8 +75,7 @@ contract TokenStaking is ReentrancyGuard {
 
     modifier whenContractHasBalance(uint256 _amount) {
         require(
-            stakeToken.balanceOf(address(this)) >= _amount,
-            "Insufficient funds right now, please try later"
+            stakeToken.balanceOf(address(this)) >= _amount ,"Insufficient funds right now, please try later"
         );
         _;
     }
@@ -109,6 +108,12 @@ contract TokenStaking is ReentrancyGuard {
 
     function checkStakingStatus() external view returns (bool) {
         return isStakingPaused;
+    }
+
+    function getTotalStakedTokens() external view returns(uint256){
+
+        return totalStakedTokens;
+
     }
 
     function getUserEstimatedRewards() external view returns (uint256) {
@@ -249,7 +254,7 @@ contract TokenStaking is ReentrancyGuard {
         userDetails[_userAddress].tokensStaked += _amount;
         totalStakedTokens += _amount;
 
-        nextAccessTime[msg.sender] = daysOfStaking;
+        nextAccessTime[msg.sender] = block.timestamp + (daysOfStaking * 60 * 60 * 24);
 
         require(
             stakeToken.transferFrom(msg.sender, address(this), _amount),
@@ -276,7 +281,7 @@ contract TokenStaking is ReentrancyGuard {
             "You haven't staked this much amount of stakeTokens"
         );
 
-        require(block.timestamp >= nextAccessTime[msg.sender] , "Staking Period has not ended yet");
+        require(block.timestamp > nextAccessTime[msg.sender] , "Staking Period has not ended yet");
 
 
         _calculateRewards(user);
@@ -344,7 +349,7 @@ contract TokenStaking is ReentrancyGuard {
 
         uint256 totalBlocks = currentBlock - userBlock;
         
-        userReward += (totalBlocks * userDetails[_user].tokensStaked * apy) / PERCENTAGE_DENOMINATOR;
+        userReward += ((totalBlocks * userDetails[_user].tokensStaked) * apy) / PERCENTAGE_DENOMINATOR;
 
       return (userReward, currentBlock);
  }
